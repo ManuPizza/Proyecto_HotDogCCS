@@ -65,14 +65,14 @@ def cargar_archivo():
 #Modulo de ingredientes
 def agregar_inicial(entrada, inventario):
     x = 0
-    for clases in Ingrediente.__subclasses__():
+    for clases in Ingrediente._subclasses_():
         if x > len(entrada):
             return False
-        if clases.__name__ == entrada[x]["Categoria"].lower():
-                inventario[clases.__name__] = []
+        if clases._name_ == entrada[x]["Categoria"].lower():
+                inventario[clases._name_] = []
                 for y in entrada[x]["Opciones"]:
                     aux = clases(*y.values)
-                    inventario[clases.__name__].append(aux)
+                    inventario[clases._name_].append(aux)
         x += 1
     return inventario
 def productos_categoria(inventario, categoria = False):
@@ -126,8 +126,8 @@ def agregar(inventario):
             necesarios.pop(0)
             necesarios.append(temporal)
             nuevo.extend(necesarios)
-            for clases in Ingrediente.__subclasses__():
-                if clases.__name__ == categoria:
+            for clases in Ingrediente._subclasses_():
+                if clases._name_ == categoria:
                     aux2 = clases(*nuevo)
                     inventario[categoria].append(aux2)
                     return True
