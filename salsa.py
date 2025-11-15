@@ -4,4 +4,3 @@ class salsa(Ingrediente):
         super().__init__(inventario, nombre)
         self.base = base
         self.color = color
-        
