@@ -1,3 +1,5 @@
+import copy
+#Clase hotdog
 class hotdog():
     def __init__(self,nombre, pan, salchicha, toppings, salsas, acompañante):
         self.nombre = nombre
@@ -6,6 +8,7 @@ class hotdog():
         self.toppings = toppings
         self.salsas = salsas
         self.acompañante = acompañante
+    #Método mostrar printea todos los atributos
     def mostrar(self):
         topping = []
         salsa = []
@@ -22,6 +25,7 @@ class hotdog():
               Salsas: {salsa}""")
         if self.acompañante:
             print(f"              Acompañante: {self.acompañante.nombre}")
+    #Este metodo confirma si se puede vender
     def comprobar_inventario(self):
         if self.pan.inventario == 0 or self.salchicha.inventario == 0 or self.acompañante.inventario == 0:
             return False
@@ -34,6 +38,7 @@ class hotdog():
                 if y.inventario == 0:
                     return False
         return True
+    #Este metodo comprueba cuanta es la cantidad máxima de ese hotdog que se puede vender con el inventario actual
     def comprobar_disponibilidad(self):
         total = []
         if self.salsas:
@@ -67,6 +72,7 @@ class hotdog():
             return posibilidad
         else:
             return False
+    #Complementa el metodo anterior
     def maximo_dia(self):
         total = self.comprobar_disponibilidad()
         if total:
@@ -83,6 +89,7 @@ class hotdog():
             return True
         else:
             return False
+    #"Compra" y descuenta del inventario de los ingredientes
     def comprar(self):
         if self.comprobar_inventario:
             self.pan.inventario -= 1
@@ -98,21 +105,24 @@ class hotdog():
             return True
         else:
             return False
+    #Los valores 
     def compra_fallida(self):
+        falla = []
         ingredientes = []
         if self.pan.inventario == 0:
-            ingredientes.append(self.pan.nombre)
+            ingredientes.append(copy.deepcopy(self.pan.nombre))
         if self.salchicha.inventario == 0:
-            ingredientes.append(self.salchicha.nombre)
+            ingredientes.appendcopy.deepcopy((self.salchicha.nombre))
         if self.acompañante:
             if self.acompañante.inventario == 0:
-                ingredientes.append(self.acompañante.nombre)
+                ingredientes.append(copy.deepcopy(self.acompañante.nombre))
         if self.salsas:
                 for x in self.salsas:
                     if x.inventario == 0:
-                        ingredientes.append(x.nombre)
+                        ingredientes.append(copy.deepcopy(x.nombre))
         if self.toppings:
                 for y in self.toppings:
                     if y.inventario == 0:
-                        ingredientes.append(y.nombre)
-        return self.nombre, ingredientes
+                        ingredientes.append(copy.deepcopy(y.nombre))
+        falla = [copy.deepcopy(self.nombre), ingredientes]
+        return falla
