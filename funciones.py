@@ -1,3 +1,4 @@
+# Importamos las clases necesarias para los ingredientes y hotdogs
 from ingrediente import Ingrediente
 from pan import pan
 from salchicha import salchicha
@@ -5,17 +6,24 @@ from acompañante import acompañante
 from salsa import salsa
 from topping import toppings
 from hotdog import hotdog
+
+# Importamos módulos para trabajar con APIs, JSON, números aleatorios, copias y archivos
 import requests
 import json
 import random
 import copy
 import os
-#Modulo de cargas
+
+# ==================== MÓDULO DE CARGAS ====================
+
 def cargar_api(api_menu, api_ingredientes):
+    # Descarga datos del menú e ingredientes desde APIs en internet
     response_menu = requests.get(api_menu)
     response_ingrdientes = requests.get(api_ingredientes)
     menus = response_menu.json()
     ingredientes = response_ingrdientes.json()
+    
+    # Convierte los datos descargados en objetos del programa
     inventario = {}
     inventario = agregar_inicial(ingredientes,inventario)
     menu = []
@@ -23,20 +31,27 @@ def cargar_api(api_menu, api_ingredientes):
     return menu, inventario
     
 def guardar(menu,inventario):
+    # Convierte los objetos del programa a formato JSON para guardar en archivos
     guardar_menu = []
     guardar_inventario = []
+    
+    # Convierte cada hotdog del menú a diccionario
     for x in menu:
         aux = vars(x)
-        #Se me olvidó cambiar los objetos de las clases a objetos guardables en json
         guardar_menu.append(aux)
+    
+    # Convierte cada ingrediente del inventario a diccionario
     for y in inventario.keys():
         opciones = []
         for z in inventario[y]:
             temporal = vars(z)
+            # Reorganiza el atributo de inventario
             valor = temporal.pop("inventario")
             temporal["inventario"] = valor
             opciones.append(temporal)
         guardar_inventario.append({"Categoria":y,"Opciones":opciones})
+    
+    # Intenta guardar los datos en archivos
     try:
         with open("menu.txt","w") as men:
             json.dump(guardar_menu,men)
@@ -45,45 +60,55 @@ def guardar(menu,inventario):
             json.dump(guardar_inventario,ingr)
         ingr.close()
         return True
-        
     except:
         print("Error al guardar el archivo")
+
 def cargar_archivo(api_menu, api_ingredientes):
+    # Intenta cargar datos desde archivos locales, si no existe carga desde API
     menu_local = "menu.txt"
     Ingredientes_local = "ingredientes.txt"
     menu = []
     inventario = {}
+    
     if os.path.exists(Ingredientes_local) and os.path.exists(menu_local):
         try:
+            # Carga el inventario desde archivo local
             with open(Ingredientes_local, "r") as ingr:
                 nuevo_inventario = json.load(ingr)
                 agregar_inicial(nuevo_inventario,inventario)
+            # Carga el menú desde archivo local
             with open(menu_local, "r") as men:
                 nuevo_menu = json.load(men)
                 hotdog_inicial(nuevo_menu, inventario,menu)
             return menu, inventario
         except:
+            # Si hay error, carga desde internet
             print("Error al cargar los archivos, se hará carga desde la api")
             return cargar_api(api_menu, api_ingredientes)
     else:
+        # Primera vez que se ejecuta el programa
         print("Esta es la primera carga")
         return cargar_api(api_menu,api_ingredientes)
-        
-            
-#Modulo de ingredientes
+
+# ==================== MÓDULO DE INGREDIENTES ====================
+
 def agregar_inicial(entrada, inventario):
+    # Convierte datos JSON en objetos de ingredientes
     x = 0
     for clases in Ingrediente.__subclasses__():
         if x > len(entrada):
             return False
         if clases.__name__ == entrada[x]["Categoria"].lower():
-                inventario[clases.__name__] = []
-                for y in entrada[x]["Opciones"]:
-                    aux = clases(*[valor.lower() if isinstance(valor, str) else valor for valor in y.values()])
-                    inventario[clases.__name__].append(aux)
+            inventario[clases.__name__] = []
+            # Crea cada ingrediente de esta categoría
+            for y in entrada[x]["Opciones"]:
+                aux = clases(*[valor.lower() if isinstance(valor, str) else valor for valor in y.values()])
+                inventario[clases.__name__].append(aux)
         x += 1
     return inventario
+
 def productos_categoria(inventario, categoria = False):
+    # Muestra todos los productos de una categoría específica
     if not categoria:
         categoria = input("Introduzca con solo minúsculas la categoría que desea buscar----->").lower()
     try:
@@ -93,7 +118,9 @@ def productos_categoria(inventario, categoria = False):
         print("La categoría que ha introducido no existe")
         return False
     return inventario[categoria]
+
 def productos_tipos(inventario):
+    # Agrupa productos por sus tipos
     lista_categoria = productos_categoria(inventario)
     tipos = {}
     if lista_categoria:
@@ -108,14 +135,19 @@ def productos_tipos(inventario):
         return tipos    
     else:
         return False
+
 def agregar(inventario):
+    # Permite agregar un nuevo producto al inventario
     categoria = input("Introduzca la categoria del producto----->").lower()
     try:
         aux = inventario[categoria]
     except:
         print("La categoría que ha introducido no existe")
         return False
+        
     nombre = input("Introduce el nombre del producto a agregar------>").lower()
+    
+    # Si el producto ya existe, solo aumenta la cantidad
     for x in aux:
         if x.nombre.lower() == nombre.lower():
             while True:
@@ -126,10 +158,12 @@ def agregar(inventario):
                     return True
                 else:
                     print("Has introducido un caracter inválido, intentalo de nuevo")
-        
+    
+    # Si es nuevo, pide todos los datos necesarios
     necesarios = list(vars(x).keys())
     necesarios.pop(0)
     nuevo = [nombre]
+    
     for y in range(len(necesarios)):
         if necesarios[y] != "inventario" and necesarios[y] != "tamaño":    
             necesarios[y]= input(f"Introduce el/la {necesarios[y]} del producto------>")
@@ -141,37 +175,48 @@ def agregar(inventario):
                     break
                 else:
                     print("solo puedes introducir números y deben ser iguales o mayores que 1")
+    
+    # Crea el nuevo producto
     temporal = necesarios[0]
     necesarios.pop(0)
     necesarios.append(temporal)
     nuevo.extend(necesarios)
+    
     for clases in Ingrediente.__subclasses__():
         if clases.__name__ == categoria:
             aux2 = clases(*nuevo)
             inventario[categoria].append(aux2)
             return True
-                
+
 def eliminar_inventario(inventario, menu):
+    # Elimina un producto del inventario
     categoria = input("Introduzca la categoria del producto----->").lower()
     try:
         aux = inventario[categoria]
     except:
         print("La categoría que ha introducido no existe")
         return False
+        
     nombre = input("Introduce el nombre del producto a eliminar------>").lower()
+    
     for x in inventario[categoria]:
         if x.nombre == nombre:
             if(x.eliminando(menu, inventario[categoria])):
                 print("Ingredientes y recetas eliminadas con éxito")
                 return True
             else:
-                print("El ingrediente no fue eliminado") 
-#Modulo de inventarios
+                print("El ingrediente no fue eliminado")
+
+# ==================== MÓDULO DE INVENTARIOS ====================
+
 def ver_inventario(inventario):
+    # Muestra todo el inventario
     for x in inventario.values():
         for y in x:
             y.mostrar()
+
 def buscar(inventario, nombre = False, categoria = False):
+    # Busca un producto en el inventario
     aux = False
     if not categoria:
         productos = productos_categoria(inventario)
@@ -191,11 +236,12 @@ def buscar(inventario, nombre = False, categoria = False):
         for x in productos:
             if x.nombre == nombre:
                 return x
-            
         return False
-        
-#Módulo de gestión de menú
+
+# ==================== MÓDULO DE GESTIÓN DE MENÚ ====================
+
 def hotdog_inicial(entrada, inventario, menu):
+    # Convierte datos JSON en objetos hotdog para el menú
     for x in entrada:
         aux = []
         for llave, valor in x.items():
@@ -209,7 +255,6 @@ def hotdog_inicial(entrada, inventario, menu):
                     if not valor:
                         aux.append(None)
                     else:
-                        
                         if llave.lower() != "nombre" and not buscar_menu(menu, valor.lower()):
                             temporal = buscar(inventario, valor.lower(),llave.lower())
                             if temporal:
@@ -258,6 +303,8 @@ def hotdog_inicial(entrada, inventario, menu):
                                 else:
                                     print("No has introducido el nombre de un ingrediente existente, intenta de nuevo")
                 aux.append(objetos)
+        
+        # Verifica que el pan y salchicha tengan el mismo tamaño
         if aux[0].tamaño == aux[1].tamaño:
             aux.insert(0,nombre)
             receta = hotdog(*aux)
@@ -273,11 +320,15 @@ def hotdog_inicial(entrada, inventario, menu):
                 elif distintos == "no":
                     break
     return menu
+
 def agregar_hotdog(inventario, menu):
+    # Permite al usuario crear un nuevo hotdog
     diccio = {}
     diccio["nombre"] = input("Introduce el nombre del hot dog---->").lower()
     diccio["pan"] = input("Introduce el nombre del pan-------->").lower()
     diccio["salchicha"] = input("Introduce el nombre de la salchicha------>").lower()
+    
+    # Agrega toppings
     lostoppings = []
     while True:
         decision = input("""Introduce (si) si quieres agregar un topping o un nuevo topping
@@ -291,6 +342,8 @@ Introduce (no) si no quieres ningún topping o si ya no quieres más toppings
         else:
             print("Has introducido una opción inválida")
     diccio["toppings"] = lostoppings
+    
+    # Agrega salsas
     lassalsas = []
     while True:
         decision = input("""Introduce (si) si quieres agregar una salsa o una nueva salsa
@@ -304,17 +357,21 @@ Introduce (no) si no quieres ninguna salsa o si ya no quieres más salsas
         else:
             print("Has introducido una opción inválida")
     diccio["salsas"] = lassalsas
+    
     diccio["acompañante"] = input("Introduce el nombre del acompañante------>").lower()
     
+    # Crea el hotdog con los datos ingresados
     transicion = [{"nombre":diccio["nombre"],"pan": diccio["pan"], "salchicha": diccio["salchicha"], "toppings": diccio["toppings"], "salsas":diccio["salsas"],"acompañante":diccio["acompañante"]}]
     hotdog_inicial(transicion,inventario,menu)
     
 def buscar_menu(menu, nombre= False):
+    # Busca un hotdog en el menú por nombre
     if nombre:
         for x in menu:
             if x.nombre == nombre:
                 return x
         return False
+        
     nombre = input("Introduce el nombre de la receta a buscar----->").lower()
     for x in menu:
         if x.nombre == nombre:
@@ -322,11 +379,14 @@ def buscar_menu(menu, nombre= False):
 
     print("No se ha encontrado ninguna receta con ese nombre")
     return False
+
 def ver_menu(menu):
+    # Muestra todo el menú de hotdogs
     for x in menu:
         x.mostrar()
     
 def eliminar(menu, inventario, nombre = False):
+    # Elimina un hotdog del menú
     if nombre:
         for x in menu:
             if x.nombre == nombre:
@@ -352,13 +412,14 @@ def eliminar(menu, inventario, nombre = False):
                     return False
                 else:
                     print("No has introducido una opción válida")
-                
         else:
             print("No se ha encontrado ninguna receta con ese nombre")
             return False
-        
-#Modulo de simulación de ventas
+
+# ==================== MÓDULO DE SIMULACIÓN DE VENTAS ====================
+
 def confirmar_disponibilidad(menu, inventario):
+    # Verifica si hay suficientes hotdogs para simular un día de ventas
     guardar_inventario = copy.deepcopy(inventario)
     guardar_menu = copy.deepcopy(menu)
     total = 0
@@ -386,6 +447,7 @@ def confirmar_disponibilidad(menu, inventario):
                 print("Por favor solo introduce (si) o (no)")
 
 def simular_dia(menu, inventario):
+    # Simula un día completo de ventas de hotdogs
     opinion = 0
     no = 0
     vendidos = 0
@@ -393,18 +455,22 @@ def simular_dia(menu, inventario):
     no_hotdog = []
     no_ingrediente = []
     acompañante_vendido = []
+    
     if confirmar_disponibilidad(menu,inventario):
         clientes = random.randint(0,200)
         hotdogs_vendidos = 0
+        
         for i in range(clientes):
             pedido = random.randint(0,5)
             hotdogs_vendidos += pedido
+            
             if pedido == 0:
                 print(f"El cliente numero {i} cambió de opinión")
                 opinion+= 1
             else:
                 lista_pedidos = []
                 lista_fallidos = []
+                
                 for x in range(pedido):
                     seleecionado = random.choice(menu)
                     if seleecionado.comprar():
@@ -425,6 +491,7 @@ def simular_dia(menu, inventario):
                             lista_fallidos.append(fallido)
                             if fallido not in no_hotdog:
                                 no_hotdog.append(fallido)
+                
                 if lista_pedidos:
                     print(f"El cliente {i} compro: ")
                     for x in lista_pedidos:
@@ -455,10 +522,12 @@ def simular_dia(menu, inventario):
                         print(x)
                     no += 1
                 
+    # Muestra estadísticas finales de la simulación
     total = clientes - no
     promedio = total / vendidos
     mayor = max(mas_vendido.values())
     mejores_vendidos = [key for key,value in mas_vendido.items() if value == mayor]
+    
     print(f"El numero de clientes que cambiaron de opinión fue: {opinion}")
     print(f"El numero de clientes que no pudieron comprar fue: {no}")
     print(f"El total de clientes fue: {total}")
@@ -467,7 +536,3 @@ def simular_dia(menu, inventario):
     print(f"Los hotdogs que causaron que el cliente se fuese sin comprar nada fueron: {no_hotdog}")
     print(f"Los ingredientes que causaron que el cliente se fuese sin comprar nada fueron: {no_ingrediente}")
     print(f"Los acompañantes vendidos fueron: {acompañante_vendido}")
-
-                    
-            
-                    
