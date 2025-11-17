@@ -2,10 +2,6 @@ class Ingrediente():
     def __init__(self, nombre, inventario = 0):
         self.nombre = nombre
         self.inventario = inventario
-    def disponibilidad(self, cantidad):
-        if cantidad <= self.inventario:
-            return True
-        return False
     def mostrar(self):
         print(f"{self.nombre} disponible en inventario: {self.inventario}")
     def eliminando(self, menu):

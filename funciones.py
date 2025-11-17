@@ -7,17 +7,20 @@ from topping import toppings
 from hotdog import hotdog
 import requests
 import json
-
+import random
+import copy
+import os
 #Modulo de cargas
-def cargar_api(menu, ingredientes):
-    response_menu = requests.get(menu)
-    response_ingrdientes = requests.get(ingredientes)
-    menu = response_menu.json()
+def cargar_api(api_menu, api_ingredientes):
+    response_menu = requests.get(api_menu)
+    response_ingrdientes = requests.get(api_ingredientes)
+    menus = response_menu.json()
     ingredientes = response_ingrdientes.json()
     inventario = {}
     inventario = agregar_inicial(ingredientes,inventario)
     menu = []
-    menu = hotdog_inicial(response_menu, inventario, menu)
+    menu = hotdog_inicial(menus, inventario, menu)
+    return menu, inventario
     
 def guardar(menu,inventario):
     guardar_menu = []
@@ -44,35 +47,39 @@ def guardar(menu,inventario):
         
     except:
         print("Error al guardar el archivo")
-def cargar_archivo():
+def cargar_archivo(api_menu, api_ingredientes):
     menu_local = "menu.txt"
     Ingredientes_local = "ingredientes.txt"
     menu = []
     inventario = {}
-    
-    try:
-        with open(Ingredientes_local, "r") as ingr:
-            nuevo_inventario = json.load(ingr)
-            agregar_inicial(nuevo_inventario,inventario)
-        with open(menu_local, "r") as men:
-            nuevo_menu = json.load(men)
-            hotdog_inicial(nuevo_menu, inventario,menu)
-    except:
-        print("Error al cargar los archivos, se hará carga desde la api")
-        #Recuerda poner la dirección de la api
-        cargar_api()
+    if os.path.exists(Ingredientes_local) and os.path.exists(menu_local):
+        try:
+            with open(Ingredientes_local, "r") as ingr:
+                nuevo_inventario = json.load(ingr)
+                agregar_inicial(nuevo_inventario,inventario)
+            with open(menu_local, "r") as men:
+                nuevo_menu = json.load(men)
+                hotdog_inicial(nuevo_menu, inventario,menu)
+            return menu, inventario
+        except:
+            print("Error al cargar los archivos, se hará carga desde la api")
+            return cargar_api(api_menu, api_ingredientes)
+    else:
+        print("Esta es la primera carga")
+        return cargar_api(api_menu,api_ingredientes)
+        
             
 #Modulo de ingredientes
 def agregar_inicial(entrada, inventario):
     x = 0
-    for clases in Ingrediente._subclasses_():
+    for clases in Ingrediente.__subclasses__():
         if x > len(entrada):
             return False
-        if clases._name_ == entrada[x]["Categoria"].lower():
-                inventario[clases._name_] = []
+        if clases.__name__ == entrada[x]["Categoria"].lower():
+                inventario[clases.__name__] = []
                 for y in entrada[x]["Opciones"]:
-                    aux = clases(*y.values)
-                    inventario[clases._name_].append(aux)
+                    aux = clases(*[valor.lower() if isinstance(valor, str) else valor for valor in y.values()])
+                    inventario[clases.__name__].append(aux)
         x += 1
     return inventario
 def productos_categoria(inventario, categoria = False):
@@ -97,6 +104,7 @@ def productos_tipos(inventario):
                     tipos[x.tipo] = [x.nombre]
                 except:
                     print("La categoría que introduciste no tiene tipo")
+        return tipos    
     else:
         return False
 def agregar(inventario):
@@ -126,13 +134,13 @@ def agregar(inventario):
             necesarios.pop(0)
             necesarios.append(temporal)
             nuevo.extend(necesarios)
-            for clases in Ingrediente._subclasses_():
-                if clases._name_ == categoria:
+            for clases in Ingrediente.__subclasses__():
+                if clases.__name__ == categoria:
                     aux2 = clases(*nuevo)
                     inventario[categoria].append(aux2)
                     return True
                 
-def eliminar(inventario, menu):
+def eliminar_inventario(inventario, menu):
     categoria = input("Introduzca la categoria del producto----->").lower()
     try:
         aux = inventario[categoria]
@@ -170,82 +178,89 @@ def buscar(inventario, nombre = False, categoria = False):
         for x in productos:
             if x.nombre == nombre:
                 return x
-            else:
-                return False
+            
+        return False
         
 #Módulo de gestión de menú
 def hotdog_inicial(entrada, inventario, menu):
     for x in entrada:
         aux = []
-        for llave, valor in x.keys(), x.values():
+        for llave, valor in x.items():
             if llave.lower() != "toppings" and llave.lower() != "salsas":
-                if llave.lower() == "nombre" and not buscar_menu(menu, valor.lower()):
-                    
-                    temporal = buscar(inventario, valor.lower(),llave.lower())
-                    if temporal:
-                        aux.append(temporal)
-                        if temporal.inventario == 0:
-                            print("Advertencia no hay disponibilidad en el inventario para este producto")
-                    else:
-                        print("El producto no se ha agregado porque sus ingredientes no existen en el inventario")
-                        for y in inventario[llave.lower()]:
-                            y.mostrar()
-                        while True:
-                            nuevo = input("Introduzca el nombre de otro ingrediente, en caso de no querer agregar el producto introduzca (NO)")
-                            if nuevo == "NO":
-                                return False
-                            else:
-                                temporal = buscar(inventario, nuevo,llave.lower())
-                                if temporal:
-                                    aux.append(temporal)
-                                    break
-                                else:
-                                    print("No has introducido el nombre de un ingrediente existente, intenta de nuevo")
-                else:
+                if llave.lower() == "nombre" and buscar_menu(menu, valor.lower()):
                     print("Ya existe una receta con ese nombre")
                     return False
+                elif llave.lower() == "nombre":
+                    nombre = valor.lower()
+                else:
+                    if not valor:
+                        aux.append(None)
+                    else:
+                        
+                        if llave.lower() != "nombre" and not buscar_menu(menu, valor.lower()):
+                            temporal = buscar(inventario, valor.lower(),llave.lower())
+                            if temporal:
+                                aux.append(temporal)
+                                if temporal.inventario == 0:
+                                    print("Advertencia no hay disponibilidad en el inventario para este producto")
+                            else:
+                                print("El producto no se ha agregado porque sus ingredientes no existen en el inventario")
+                                for y in inventario[llave.lower()]:
+                                    y.mostrar()
+                                while True:
+                                    hola = temporal
+                                    nuevo = input("Introduzca el nombre de otro ingrediente, en caso de no querer agregar el producto introduzca (no)").lower()
+                                    if nuevo == "no":
+                                        return False
+                                    else:
+                                        temporal = buscar(inventario, nuevo,llave.lower())
+                                        if temporal:
+                                            aux.append(temporal)
+                                            break
+                                        else:
+                                            print("No has introducido el nombre de un ingrediente existente, intenta de nuevo")
             else:
                 objetos = []
+                errando = llave.lower()
+                if llave.lower() == "salsas":
+                    errando = "salsa"
                 for z in valor:
-                    temporal = buscar(inventario, x.lower(),llave.lower())
+                    temporal = buscar(inventario, z.lower(),errando)
                     if temporal:
                         objetos.append(temporal)
                         if temporal.inventario == 0:
                             print("Advertencia no hay disponibilidad en el inventario para este producto")
                     else:
                         print("El producto no se ha agregado porque sus ingredientes no existen en el inventario")
-                        for y in inventario[llave.lower()]:
+                        for y in inventario[errando]:
                             y.mostrar()
                         while True:
                             nuevo = input("Introduzca el nombre de otro ingrediente, en caso de no querer agregar el producto introduzca (NO)")
                             if nuevo == "NO":
                                 return False
                             else:
-                                temporal = buscar(inventario, nuevo,llave.lower())
+                                temporal = buscar(inventario, nuevo,errando)
                                 if temporal:
                                     objetos.append(temporal)
                                     break
                                 else:
                                     print("No has introducido el nombre de un ingrediente existente, intenta de nuevo")
                 aux.append(objetos)
-        if aux[1].tamaño == aux[2].tamaño:
-            aux2 = aux[3]
-            aux.pop(3)
-            aux.append(aux2)
+        if aux[0].tamaño == aux[1].tamaño:
+            aux.insert(0,nombre)
             receta = hotdog(*aux)
             menu.append(receta)
         else:
             while True:
                 distintos = input("El tamaño del pan y de la salchicha no coinciden, si igual desea agregarlo introduzca (si), por el contrario si desea cancelar la operación introduzca (no)----->").lower()
                 if distintos == "si":
-                    aux2 = aux[3]
-                    aux.pop(3)
-                    aux.append(aux2)
+                    aux.insert(0,nombre)
                     receta = hotdog(*aux)
                     menu.append(receta)
                     break
                 elif distintos == "no":
                     break
+    return menu
 def agregar_hotdog(inventario, menu):
     diccio = {}
     diccio["nombre"] = input("Introduce el nombre del hot dog---->").lower()
@@ -288,7 +303,7 @@ def buscar_menu(menu, nombre= False):
             if x.nombre == nombre:
                 return x
         return False
-    nombre = input("Introduce el nombre de la receta a buscar----->")
+    nombre = input("Introduce el nombre de la receta a buscar----->").lower()
     for x in menu:
         if x.nombre == nombre:
             return x
@@ -297,7 +312,10 @@ def buscar_menu(menu, nombre= False):
     return False
 def ver_menu(menu):
     for x in menu:
+        if not x:
+            print("Soy pendejo")
         x.mostrar()
+    
 def eliminar(menu, inventario, nombre = False):
     if nombre:
         for x in menu:
@@ -328,3 +346,113 @@ def eliminar(menu, inventario, nombre = False):
         else:
             print("No se ha encontrado ninguna receta con ese nombre")
             return False
+        
+#Modulo de simulación de ventas
+def confirmar_disponibilidad(menu, inventario):
+    guardar_inventario = copy.deepcopy(inventario)
+    guardar_menu = copy.deepcopy(menu)
+    total = 0
+    for x in menu:
+        if x.maximo_dia():
+            total +=1
+    if total >= 1000:
+        inventario = guardar_inventario
+        menu = guardar_menu
+        return True
+    else:
+        while True:
+            decision = input(f"""¿Está seguro que desea simular el día? El total de hot dogs disponibles para la venta es {total}
+                             El mínimo debe ser 1000
+                             Introduzca (si) si desea continuar con la simulación
+                             Introduzca (no) si desea detener la simulacion
+                             -------->""").lower
+            if decision == "si":
+                inventario = guardar_inventario
+                menu = guardar_menu
+                return True
+            elif decision == "no":
+                return False
+            else:
+                print("Por favor solo introduce (si) o (no)")
+
+def simular_dia(menu, inventario):
+    opinion = 0
+    no = 0
+    vendidos = 0
+    mas_vendido = {}
+    no_hotdog = []
+    no_ingrediente = []
+    acompañante_vendido = []
+    if confirmar_disponibilidad(menu,inventario):
+        clientes = random.randint(0,200)
+        hotdogs_vendidos = 0
+        for i in range(clientes):
+            pedido = random.randint(0,5)
+            hotdogs_vendidos += pedido
+            if pedido == 0:
+                print(f"El cliente numero {i} cambió de opinión")
+                opinion+= 1
+            else:
+                lista_pedidos = []
+                lista_fallidos = []
+                for x in range(pedido):
+                    seleecionado = random.choice(menu)
+                    if seleecionado.comprar():
+                        lista_pedidos.append(seleecionado.nombre)
+                        vendidos += 1
+                        if seleecionado.acompañante:
+                            if seleecionado.acompañante.nombre not in acompañante_vendido:
+                                acompañante_vendido.append(seleecionado.acompañante.nombre)
+                        try:
+                            mas_vendido[seleecionado.nombre] += 1
+                        except:
+                            mas_vendido[seleecionado] = 1
+                    else:
+                        fallido, motivos = seleecionado.compra_fallida()
+                        if fallido not in lista_fallidos:
+                            lista_fallidos.append(fallido)
+                            if fallido not in no_hotdog:
+                                no_hotdog.append(fallido)
+                if lista_pedidos:
+                    print(f"El cliente {i} compro: ")
+                    for x in lista_pedidos:
+                        print(x)
+                    if motivos:
+                        print(f"Ademas el cliente {i} no pudo comprar estos productos: {lista_fallidos} debido a la falta de los siguientes ingredientes:")
+                        for y in motivos:
+                            print(y)
+                            if y not in no_ingrediente:
+                                no_ingrediente.append(y)
+                    if random.choice([True,False]):
+                        extra = False
+                        maximo = 0
+                        while not extra and maximo<50:
+                            extra = random.choice(inventario["acompañante"])
+                            if extra.inventario == 0:
+                                extra = False
+                                maximo+=1
+                        print(f"El cliente {i} compro un acompañante adicional: {extra.nombre}")
+                        if extra.nombre not in acompañante_vendido:
+                            acompañante_vendido.append(extra.nombre)
+                else:
+                    print(f"El cliente {i} no pudo comprar estos productos: {lista_fallidos} debido a la falta de los siguientes productos:")
+                    for x in motivos:
+                        print(x)
+                    no += 1
+                
+    total = clientes - no
+    promedio = total / vendidos
+    mayor = max(mas_vendido.values())
+    mejores_vendidos = [key for key,value in mas_vendido if value == mayor]
+    print(f"El numero de clientes que cambiaron de opinión fue: {opinion}")
+    print(f"El numero de clientes que no pudieron comprar fue: {no}")
+    print(f"El total de clientes fue: {total}")
+    print(f"El promedio de hotdogs por clientes fue: {promedio}")
+    print(f"El o los hotdogs más vendidos fueron: {mejores_vendidos}")
+    print(f"Los hotdogs que causaron que el cliente se fuese sin comprar nada fueron: {no_hotdog}")
+    print(f"Los ingredientes que causaron que el cliente se fuese sin comprar nada fueron: {no_ingrediente}")
+    print(f"Los acompañantes vendidos fueron: {acompañante_vendido}")
+
+                    
+            
+                    
