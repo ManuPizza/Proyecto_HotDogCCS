@@ -1,4 +1,6 @@
+#Main
 import funciones
+#La función main llama a todas las funciones en el archivo funciones, para correr el programa
 def main():
     menu,inventario = funciones.cargar_archivo("https://raw.githubusercontent.com/FernandoSapient/BPTSP05_2526-1/main/menu.json","https://raw.githubusercontent.com/FernandoSapient/BPTSP05_2526-1/main/ingredientes.json")
     while True:
@@ -48,6 +50,8 @@ def main():
                     else:
                         print("El HotDog no está disponible")
                 elif decision2 == "3":
+                    #Error aqui 
+                    #Ya resuelto
                     funciones.agregar_hotdog(inventario,menu)
                 elif decision2 == "4":
                     funciones.eliminar(menu,inventario)
@@ -59,6 +63,8 @@ def main():
             funciones.simular_dia(menu,inventario)
         elif decision == "5":
             print("Gracias por usar nuestro programa")
+            #Error aqui
+            #Ya resuelto
             funciones.guardar(menu,inventario)
             break
         else:

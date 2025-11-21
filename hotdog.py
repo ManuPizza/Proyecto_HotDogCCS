@@ -105,7 +105,7 @@ class hotdog():
             return True
         else:
             return False
-    #Los valores 
+    #Los que no pudieron ser comprados se guardan
     def compra_fallida(self):
         falla = []
         ingredientes = []

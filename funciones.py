@@ -33,12 +33,36 @@ def cargar_api(api_menu, api_ingredientes):
 def guardar(menu,inventario):
     # Convierte los objetos del programa a formato JSON para guardar en archivos
     guardar_menu = []
+    guardar_menu_final = []
     guardar_inventario = []
     
     # Convierte cada hotdog del menú a diccionario
     for x in menu:
         aux = vars(x)
         guardar_menu.append(aux)
+    for valor in guardar_menu:
+        auxiliar = {}
+        for key, value in valor.items():
+            if key == "nombre":
+                auxiliar[key] = value
+            else:
+                if not isinstance(value,list):
+                    if value:
+                        auxiliar[key] = value.nombre
+                else:
+                    if value:
+                        lista = []
+                        for x in value:
+                            lista.append(x.nombre)
+                        auxiliar[key] = lista   
+                    else:
+                        auxiliar[key] = []
+                if key == "acompañante":
+                    if value:
+                        auxiliar[key] = value.nombre
+                    else:
+                        auxiliar[key] = None      
+        guardar_menu_final.append(auxiliar)
     
     # Convierte cada ingrediente del inventario a diccionario
     for y in inventario.keys():
@@ -54,7 +78,7 @@ def guardar(menu,inventario):
     # Intenta guardar los datos en archivos
     try:
         with open("menu.txt","w") as men:
-            json.dump(guardar_menu,men)
+            json.dump(guardar_menu_final,men)
         men.close()
         with open("ingredientes.txt","w") as ingr:
             json.dump(guardar_inventario,ingr)
@@ -94,6 +118,7 @@ def cargar_archivo(api_menu, api_ingredientes):
 
 def agregar_inicial(entrada, inventario):
     # Convierte datos JSON en objetos de ingredientes
+    
     x = 0
     for clases in Ingrediente.__subclasses__():
         if x > len(entrada):
@@ -245,7 +270,7 @@ def hotdog_inicial(entrada, inventario, menu):
     for x in entrada:
         aux = []
         for llave, valor in x.items():
-            if llave.lower() != "toppings" and llave.lower() != "salsas":
+            if not isinstance(valor,list) :
                 if llave.lower() == "nombre" and buscar_menu(menu, valor.lower()):
                     print("Ya existe una receta con ese nombre")
                     return False
@@ -255,7 +280,7 @@ def hotdog_inicial(entrada, inventario, menu):
                     if not valor:
                         aux.append(None)
                     else:
-                        if llave.lower() != "nombre" and not buscar_menu(menu, valor.lower()):
+                        
                             temporal = buscar(inventario, valor.lower(),llave.lower())
                             if temporal:
                                 aux.append(temporal)
@@ -306,15 +331,17 @@ def hotdog_inicial(entrada, inventario, menu):
         
         # Verifica que el pan y salchicha tengan el mismo tamaño
         if aux[0].tamaño == aux[1].tamaño:
-            aux.insert(0,nombre)
-            receta = hotdog(*aux)
+            aux2 = [nombre]
+            aux2.extend(aux)
+            receta = hotdog(*aux2)
             menu.append(receta)
         else:
             while True:
                 distintos = input("El tamaño del pan y de la salchicha no coinciden, si igual desea agregarlo introduzca (si), por el contrario si desea cancelar la operación introduzca (no)----->").lower()
                 if distintos == "si":
-                    aux.insert(0,nombre)
-                    receta = hotdog(*aux)
+                    aux2 = [nombre]
+                    aux2.extend(aux)
+                    receta = hotdog(*aux2)
                     menu.append(receta)
                     break
                 elif distintos == "no":

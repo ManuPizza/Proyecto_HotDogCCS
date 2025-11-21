@@ -1,4 +1,5 @@
 from ingrediente import Ingrediente
+#Clase salchicha, clase hija de ingrediente
 class salchicha(Ingrediente):
     def __init__(self, nombre, tipo, tamaño, unidad, inventario = 0):
         super().__init__(nombre, inventario)

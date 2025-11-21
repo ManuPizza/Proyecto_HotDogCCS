@@ -1,9 +1,12 @@
+#Clase padre y abstracta ingrediente
 class Ingrediente():
     def __init__(self, nombre, inventario = 0):
         self.nombre = nombre
         self.inventario = inventario
+    #Muestra el nombre e inventario disponible, funciona para las subclases (No utiliza polimorfismo)
     def mostrar(self):
         print(f"{self.nombre} disponible en inventario: {self.inventario}")
+    #Elimina un ingrediente asegurandose que se eliminen las recetas
     def eliminando(self, menu, ubicacion):
         aux = []
         for receta in menu:
